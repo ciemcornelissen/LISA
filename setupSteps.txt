@@ -1,0 +1,16 @@
+python -m venv venv
+
+venv\Scripts\activate
+
+
+pip install -r requirements.txt
+
+run_demo.bat
+
+
+
+
+
+#linux
+chmod +x run_demo.sh
+./run_demo.sh
