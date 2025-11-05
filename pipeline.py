@@ -1,3 +1,35 @@
+"""Legacy entry-point kept for backwards compatibility.
+
+Importing from this module forwards to the maintained helpers under
+``lisa.inference`` so existing notebooks that still do ``import pipeline``
+keep running. For new code prefer ``from lisa import inference`` directly.
+"""
+
+from lisa.inference import (  # noqa: F401
+    bunchTracker,
+    create_pseudo_rgb,
+    data_finder,
+    extract_patches_from_bbox,
+    interpolate_gps,
+    load_models_data,
+    preprocess_and_predict_quality,
+    preprocess_and_predict_quality_onnx,
+    process_single_window,
+    snv_tensor,
+)
+
+__all__ = [
+    "bunchTracker",
+    "create_pseudo_rgb",
+    "data_finder",
+    "extract_patches_from_bbox",
+    "interpolate_gps",
+    "load_models_data",
+    "preprocess_and_predict_quality",
+    "preprocess_and_predict_quality_onnx",
+    "process_single_window",
+    "snv_tensor",
+]
 from utilities import *
 import numpy as np
 import torch

@@ -1,3 +1,29 @@
+"""Compatibility shim forwarding legacy utilities into the lisa package.
+
+This module used to contain a large collection of training and preprocessing
+helpers.  The active pipeline now lives in :mod:`lisa`, so we only keep the
+pieces required at inference time and re-export them here for older scripts.
+"""
+
+from lisa.legacy_models import (  # noqa: F401
+    ACTIVATION_MAP,
+    EncoderAE_3D,
+    SavGolFilterGPU,
+    SpectralPredictorWithTransformer,
+)
+
+__all__ = [
+    "ACTIVATION_MAP",
+    "EncoderAE_3D",
+    "SavGolFilterGPU",
+    "SpectralPredictorWithTransformer",
+]
+
+
+def __getattr__(name: str):
+    raise AttributeError(
+        f"'src.utilities' no longer exposes '{name}'. Import from 'lisa' instead."
+    )
 import os
 import subprocess
 import sys
@@ -56,6 +82,7 @@ import time
 import plotly.graph_objects as go
 import io
 import random
+from lisa.visualization import create_annotated_map
 # import umap
 import re
 import shutil # For safely removing the old model directory
@@ -6335,116 +6362,17 @@ def create_final_map_png(image_input, results_list, output_path="results/final_a
     plt.show()
     print(f"Final annotated map saved to '{output_path}'.")
 def create_final_map_png_2(image_input, results_list, output_path="results/final_annotated_map.png", saveFig=True, showFig=False):
-    """
-    Overlays analysis results onto an image and saves it at a high resolution.
+    """Compatibility wrapper delegating to lisa.visualization.create_annotated_map."""
 
-    Args:
-        image_input (str, np.ndarray, or PIL.Image.Image):
-            The background image.
-        results_list (list): List of dictionaries containing analysis results.
-        output_path (str): The path to save the final annotated image.
-    """
-    # --- IMAGE PREPARATION (unchanged) ---
-    img = None
-    if isinstance(image_input, str):
-        try:
-            img = Image.open(image_input)
-            print(f"Successfully loaded image from path '{image_input}'.")
-        except FileNotFoundError:
-            print(f"Error: The image file was not found at '{image_input}'.")
-            return
-    elif isinstance(image_input, np.ndarray):
-        print("Input is a NumPy array. Converting to a Pillow Image.")
-        if image_input.dtype != np.uint8:
-            print(f"NumPy array is of type '{image_input.dtype}', converting to 'uint8'.")
-            if image_input.max() <= 1.0 and image_input.min() >= 0.0:
-                 image_input = (image_input * 255).astype(np.uint8)
-            else:
-                 img_norm = (image_input - image_input.min()) / (image_input.max() - image_input.min())
-                 image_input = (img_norm * 255).astype(np.uint8)
-        img = Image.fromarray(image_input)
-    elif isinstance(image_input, Image.Image):
-        print("Input is a Pillow Image object. Using it directly.")
-        img = image_input
-    else:
-        print(f"Error: Unsupported input type for 'image_input': {type(image_input)}.")
-        return
-
-    img_width, img_height = img.size
-    print(f"Processing image with dimensions {img_width}x{img_height}.")
-
-    # --- HIGH-RESOLUTION PLOTTING SETUP ---
-
-    # 1. Define the desired output resolution in Dots Per Inch.
-    #    300 is great for high-quality images. Use 600 for print quality.
-    DPI = 300
-
-    # 2. Calculate the figure size in inches to match the image pixel dimensions 1:1.
-    #    This is the key to preventing Matplotlib from resizing your background image.
-    fig_width_in = img_width / DPI
-    fig_height_in = img_height / DPI
-
-    # 3. Create the figure with the calculated size.
-    fig, ax = plt.subplots(1, figsize=(fig_width_in, fig_height_in), dpi=DPI)
-    ax.imshow(img)
-
-    # 4. Make annotation sizes (lines, fonts) dynamic and proportional to image size.
-    #    This ensures they look good on both small and very large images.
-    line_width = int(img_width / 4000)       # e.g., line width of 2 for an 8000px image
-    font_size =  int(img_width / 400) #5      # e.g., font size 40 for an 8000px image
-    text_offset = int(img_width / 4000)   # Adjust vertical text position
-
-    print(f"Using dynamic annotation sizes: line_width={line_width}, font_size={font_size}")
-
-    # --- ANNOTATION LOOP (unchanged logic, but uses dynamic sizes now) ---
-    for result in results_list:
-        bbox = result.get('global_bounding_box')
-        if not bbox:
-            print(f"Warning: Skipping result for bunch_id {result.get('bunch_id')} due to missing bounding box.")
-            continue
-
-        b_id = result.get('bunch_id', 'N/A')
-        brix = result.get('predicted_brix', 0)
-        acid = result.get('predicted_acidity', 0)
-        weight = result.get('predicted_weight_g', 0)
-
-        x1, y1, x2, y2 = bbox
-        box_width = x2 - x1
-        box_height = y2 - y1
-
-        rect = patches.Rectangle(
-            (x1, y1), box_width, box_height,
-            linewidth=line_width, # Use dynamic line width
-            edgecolor='lime',
-            facecolor='none'
-        )
-        ax.add_patch(rect)
-
-        label_text = f"ID:{b_id} | Brix:{brix:.1f} | Acid:{acid:.1f} | W:{weight:.0f}g"
-        ax.text(
-            x1, y1 - text_offset, # Use dynamic text offset
-            label_text,
-            color='white',
-            fontsize=font_size,   # Use dynamic font size
-            bbox=dict(facecolor='black', alpha=0.7, edgecolor='none', boxstyle='round,pad=0.3')
-        )
-
-    # --- SAVE THE HIGH-RESOLUTION FIGURE ---
-    ax.axis('off')
-    plt.tight_layout(pad=0)
-
-    # Ensure the output directory exists
-    output_dir = os.path.dirname(output_path)
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
-
-    # Save the figure using the same DPI we used to create it.
-    if saveFig:
-        plt.savefig(output_path, dpi=DPI, bbox_inches='tight', pad_inches=0)
-        print(f"High-resolution annotated map saved to '{output_path}'.")
-    if showFig:
-        plt.show()
-    plt.close(fig) # Close the figure to free up memory
+    dpi = 300
+    create_annotated_map(
+        image_input=image_input,
+        results_list=results_list,
+        output_path=output_path,
+        dpi=dpi,
+        save_fig=saveFig,
+        show_fig=showFig,
+    )
 
 
 def plot_predictions(all_test_pred, all_test_target, wandb):

@@ -16,7 +16,7 @@ from PIL import Image
 from scipy.spatial.distance import cdist
 from ultralytics import YOLO
 
-from src.utilities import (
+from lisa.legacy_models import (
     EncoderAE_3D,
     SavGolFilterGPU,
     SpectralPredictorWithTransformer,
@@ -175,6 +175,40 @@ def preprocess_and_predict_quality(
         avg_acid = acid_preds[grape_mask].mean().item()
         return avg_brix, avg_acid, grape_percentage
     LOGGER.debug("No grape patches classified by quality model")
+    return None
+
+
+def preprocess_and_predict_quality_onnx(
+    patches: List[np.ndarray],
+    quality_session,
+    models: Dict[str, object],
+) -> Tuple[float, float, float] | None:
+    """ONNX Runtime variant of :func:`preprocess_and_predict_quality`."""
+
+    if not patches:
+        return None
+
+    savgol_gpu_deriv1 = SavGolFilterGPU(window_length=5, deriv=1)
+    preprocessed = [savgol_gpu_deriv1(torch.tensor(p.copy())) for p in patches]
+    batch_tensor = torch.stack(preprocessed).permute(0, 3, 1, 2).contiguous()
+
+    ort_inputs = {quality_session.get_inputs()[0].name: batch_tensor.numpy()}
+    outputs = quality_session.run(None, ort_inputs)
+    brix_preds, acid_preds, is_grape_logits = outputs
+
+    grape_mask = (is_grape_logits > 0).squeeze()
+    num_grape = np.sum(grape_mask)
+    total = grape_mask.size
+    grape_percentage = (num_grape / total) * 100 if total else 0
+    if grape_percentage < 30:
+        LOGGER.debug("Rejecting bunch: grape percentage %.1f%% below threshold", grape_percentage)
+        return None
+
+    if np.any(grape_mask):
+        avg_brix = brix_preds[grape_mask].mean()
+        avg_acid = acid_preds[grape_mask].mean()
+        return float(avg_brix), float(avg_acid), float(grape_percentage)
+    LOGGER.debug("No grape patches classified by ONNX quality model")
     return None
 
 
@@ -384,6 +418,7 @@ __all__ = [
     "extract_patches_from_bbox",
     "interpolate_gps",
     "load_models_data",
+    "preprocess_and_predict_quality_onnx",
     "preprocess_and_predict_quality",
     "process_single_window",
     "snv_tensor",
