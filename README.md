@@ -8,7 +8,7 @@ LISA bundles the code that accompanies the grape quality monitoring paper. The r
 - Ready-to-use pretrained weights stored under `models/` for reproducible results.
 - CLI for batch processing single folders or continuously watching for new captures.
 - Lightweight Python package (`lisa`) with reusable helpers for custom tooling.
-- Example outputs in `results/` and the full manuscript PDF (`_Ciem__Hyperspectral_grape_monitoring___IoT_journal.Final.pdf`).
+- Example outputs in `results/`.
 
 ## Quickstart
 
@@ -136,6 +136,8 @@ If you find this work useful, please cite the accompanying article:
 ```
 
 Paper: <https://ieeexplore.ieee.org/document/11192515>
+
+Preprint: <https://arxiv.org/abs/2510.04864>
 
 ## Contact
 
