@@ -3,9 +3,9 @@ from __future__ import annotations
 """Utilities for loading and reusing heavy pipeline assets."""
 
 from dataclasses import dataclass
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 
-from src.pipeline import load_models_data
+from lisa.inference import load_models_data
 
 
 @dataclass(slots=True)

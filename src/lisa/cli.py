@@ -55,6 +55,12 @@ def _add_visualization_args(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         help="Skip writing the annotated map to disk",
     )
+    parser.add_argument(
+        "--plot-dpi",
+        type=int,
+        default=300,
+        help="Dots-per-inch used for the exported annotated map (default: %(default)s)",
+    )
 
 
 def _add_runtime_args(parser: argparse.ArgumentParser, include_watch_folder: bool = True) -> None:
@@ -190,6 +196,7 @@ def _build_runtime_config(args: argparse.Namespace, *, default_watch_folder: Pat
         histogram_bins=int(args.hist_bins),
         show_fig=bool(args.show_fig),
         save_fig=not bool(args.no_save_fig),
+        dpi=int(args.plot_dpi),
     )
 
     return PipelineRuntimeConfig(

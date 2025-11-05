@@ -16,6 +16,7 @@ class VisualizationConfig:
     histogram_bins: int = 10
     show_fig: bool = False
     save_fig: bool = True
+    dpi: int = 300
 
 
 @dataclass(slots=True)

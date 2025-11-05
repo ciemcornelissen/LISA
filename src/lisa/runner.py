@@ -12,13 +12,13 @@ import numpy as np
 import spectral as sp
 from PIL import Image
 
-from src.pipeline import (
+from lisa.inference import (
     bunchTracker,
     data_finder,
     interpolate_gps,
     process_single_window,
 )
-from src.utilities import create_final_map_png_2
+from lisa.visualization import create_annotated_map
 
 from .assets import PipelineAssets
 from .config import PipelineRuntimeConfig
@@ -142,12 +142,13 @@ def process_folder(
         image_rgb_pil = Image.fromarray((rgb_image * 255).astype(np.uint8))
 
         output_path = runtime.results_dir / f"{folder_path.name}.png"
-        create_final_map_png_2(
+        create_annotated_map(
             image_rgb_pil,
             all_results,
-            output_path=str(output_path),
-            saveFig=runtime.visualization.save_fig,
-            showFig=runtime.visualization.show_fig,
+            output_path=output_path,
+            save_fig=runtime.visualization.save_fig,
+            show_fig=runtime.visualization.show_fig,
+            dpi=runtime.visualization.dpi,
         )
 
         LOGGER.info("Saved annotated map to %s", output_path)
