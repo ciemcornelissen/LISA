@@ -1,12 +1,16 @@
 #!/bin/bash
 
+set -e
+
 echo "--- Starting Grape Analysis Pipeline ---"
 
-# Activate the virtual environment (Linux syntax)
-source venv/bin/activate
+if [ -d "venv" ]; then
+	# Activate the virtual environment (Linux syntax)
+	# shellcheck disable=SC1091
+	source venv/bin/activate
+fi
 
-# Run the main Python script
-echo "Running analysis..."
-python main.py #<-- Make sure this is your main script and correct path
+echo "Running analysis once..."
+python main.py watch --run-once
 
 echo "--- Demo Finished ---"
