@@ -13,6 +13,9 @@ data/
 models/
 !models/.gitkeep
 
+# Static assets tracked in git
+!assets/
+
 # Paper resources kept locally only
 relevantInformation/
 _Ciem__Hyperspectral_grape_monitoring___IoT_journal.Final.pdf

@@ -1,3 +1,5 @@
+# ![LISA logo](assets/lisa_logo.png)
+
 # LISA – Hyperspectral Vineyard Pipeline
 
 LISA bundles the code that accompanies the grape quality monitoring paper. The repository contains the full processing pipeline, pre-trained models, and supporting artefacts used to generate spatial maps of grape bunch quality from hyperspectral captures.
