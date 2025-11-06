@@ -80,7 +80,7 @@ def _add_runtime_args(parser: argparse.ArgumentParser, include_watch_folder: boo
     parser.add_argument(
         "--results-dir",
         type=Path,
-        default=Path("results"),
+        default=Path("results/generated"),
         help="Directory where annotated maps will be stored",
     )
     parser.add_argument(

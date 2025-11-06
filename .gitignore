@@ -14,8 +14,7 @@ models/
 !models/.gitkeep
 
 # Generated outputs and logs
-results/
-!results/.gitkeep
+results/generated/
 processed_folders.log
 
 # Notebook checkpoints

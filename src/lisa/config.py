@@ -31,7 +31,7 @@ class PipelineRuntimeConfig:
     start_point_gps: Tuple[float, float] = (50.773636, 5.154737)
     end_point_gps: Tuple[float, float] = (50.773885, 5.154849)
     tracker_match_threshold: int = 75
-    results_dir: Path | str = Path("results")
+    results_dir: Path | str = Path("results/generated")
     visualization: VisualizationConfig = field(default_factory=VisualizationConfig)
 
     def __post_init__(self) -> None:

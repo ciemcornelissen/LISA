@@ -28,7 +28,9 @@ LFS_POINTER_PREFIX = b"version https://git-lfs.github.com/spec/v1"
 
 def _ensure_materialized(path: Path) -> None:
     if not path.exists():
-        raise FileNotFoundError(f"Missing required model artefact: {path}")
+        raise FileNotFoundError(
+            f"Missing required model artefact: {path}. Run `bash scripts/download_models.sh` to fetch pretrained weights."
+        )
     try:
         with path.open("rb") as handle:
             header = handle.read(len(LFS_POINTER_PREFIX))
