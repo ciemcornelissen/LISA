@@ -5,19 +5,18 @@ LISA bundles the code that accompanies the grape quality monitoring paper. The r
 ## Highlights
 
 - End-to-end processing pipeline with YOLO-based bunch detection, weight prediction, and quality estimation.
-- Ready-to-use pretrained weights stored under `models/` for reproducible results.
+- One-command model bootstrap via `scripts/download_models.sh` (no Git LFS required).
 - CLI for batch processing single folders or continuously watching for new captures.
 - Lightweight Python package (`lisa`) with reusable helpers for custom tooling.
-- Example outputs in `results/`.
+- Example outputs in `results/sample/`.
 
 ## Quickstart
 
-1. Install [Git LFS](https://git-lfs.com) (required for the large checkpoints) and initialise it inside the repository:
+1. Clone the repository and move into it:
    ```bash
-   git lfs install
-   git lfs pull
+   git clone https://github.com/ciemcornelissen/LISA.git
+   cd LISA
    ```
-   > Tip: if `models/configs.pkl` begins with the ASCII string `version https://git-lfs…` you are still seeing an LFS pointer. Re-run the commands above or copy the real checkpoints from your local archive before continuing.
 2. Create and activate an environment (Python 3.11 works best with the pinned packages):
    ```bash
    python3.11 -m venv .venv
@@ -31,7 +30,7 @@ LISA bundles the code that accompanies the grape quality monitoring paper. The r
    ```bash
    pip install -e .
    ```
-5. Download the pretrained model bundle:
+5. Download the pretrained model bundle (fetches YOLO checkpoints, transformer weights, and cached datasets):
    ```bash
    bash scripts/download_models.sh
    ```
@@ -51,7 +50,7 @@ The hyperspectral captures are large (several GB per sweep), so the repository k
 
 ## Pretrained Models
 
-The repository no longer ships the large checkpoints inside `models/`; the directory is kept as an empty placeholder (`models/.gitkeep`). The helper script defaults to the hosted `LISA_models.zip` bundle and restores everything in one step:
+The repository no longer ships the large checkpoints inside `models/`; the directory is kept as an empty placeholder (`models/.gitkeep`). The helper script defaults to the hosted `LISA_models.zip` bundle containing the YOLO detector, transformer-based regressors, and cached patch datasets. Restore everything in one step:
 
 ```bash
 bash scripts/download_models.sh
@@ -65,7 +64,7 @@ LISA_MODELS_ARCHIVE_NAME="custom.tar.gz" \
 bash scripts/download_models.sh
 ```
 
-The pipeline validates each artefact at runtime and surfaces a clear error if the download script hasn’t been executed yet or if a Git LFS pointer slipped in.
+The pipeline validates each artefact at runtime and surfaces a clear error if the download script hasn’t been executed yet or if a Git LFS pointer slipped in (no Git LFS setup required).
 
 ## Usage
 
@@ -96,8 +95,8 @@ See `python main.py --help` (or `lisa --help` after editable installation) for t
 - `src/lisa/visualization.py` – helpers for rendering annotated overview maps.
 - `src/lisa/legacy_models.py` – transformer and autoencoder definitions retained for compatibility with the original experiments.
 - `src/pipeline.py` and `src/utilities.py` – compatibility shims that keep legacy notebooks working (new code should import from `src/lisa`).
-- `models/` – pretrained weights and cached artefacts referenced by the pipeline.
-- `results/sample/` – curated example(s) referenced in the README.
+- `models/` – downloaded at runtime; empty except for `models/.gitkeep` until `scripts/download_models.sh` runs.
+- `results/sample/` – curated example(s) referenced in the README (e.g. `results/sample/grape_bunch_quality_map.png`).
 - `results/generated/` – runtime outputs produced by the CLI (ignored by Git).
 - `relevantInformation/` – paper resources that may migrate to an external archive later.
 - `demoTest.ipynb` – exploratory notebook using the legacy APIs.
@@ -127,7 +126,7 @@ flowchart LR
 
 ## Example Output
 
-![Annotated Sweep](results/sample/annotated_map.png)
+![Annotated Sweep](results/sample/grape_bunch_quality_map.png)
 
 ## Paper
 
@@ -135,7 +134,7 @@ The manuscript is stored at `_Ciem__Hyperspectral_grape_monitoring___IoT_journal
 
 ## Notes
 
-- Model checkpoints (`.pth`, `.pkl`) are sizeable; keep them in Git LFS if the repository footprint grows.
+- Pretrained assets now live outside Git; rerun `scripts/download_models.sh` (or set `LISA_MODELS_URL`) whenever you need to refresh them.
 - CUDA is supported for faster inference, but the pipeline runs on CPU as well.
 - When the `relevantInformation/` folder moves elsewhere, update the README links accordingly.
 - If you hit `_pickle.UnpicklingError: invalid load key, 'v'`, double-check that Git LFS downloaded the real artifacts and that you are not pointing at pointer stubs.
