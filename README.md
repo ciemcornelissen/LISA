@@ -106,8 +106,8 @@ See `python main.py --help` (or `lisa --help` after editable installation) for t
 
 ## Demo Scripts
 
-- `run_demo.sh`
-- `run_demo.bat`
+- `scripts/run_demo.sh`
+- `scripts/run_demo.bat`
 
 Both scripts activate `venv/` when present and execute `python main.py watch --run-once`. Populate `data/` with a capture folder to try the pipeline locally.
 
