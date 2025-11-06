@@ -13,6 +13,10 @@ data/
 models/
 !models/.gitkeep
 
+# Paper resources kept locally only
+relevantInformation/
+_Ciem__Hyperspectral_grape_monitoring___IoT_journal.Final.pdf
+
 # Generated outputs and logs
 results/generated/
 processed_folders.log
