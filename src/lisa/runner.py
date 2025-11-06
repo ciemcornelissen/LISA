@@ -3,6 +3,7 @@ from __future__ import annotations
 """Runtime helpers for processing hyperspectral capture folders."""
 
 from dataclasses import dataclass
+import gc
 import logging
 import time
 from pathlib import Path
@@ -76,19 +77,25 @@ def process_folder(
 
         hdr = sp.envi.open(data_locations["hdr"], data_locations["img"])
         hsi_data_cube = hdr.load()
-        hsi_data_cube_rgb = hsi_data_cube.transpose(1, 0, 2)[::-1]
+        hsi_data_cube_rgb = np.ascontiguousarray(hsi_data_cube.transpose(1, 0, 2)[::-1], dtype=np.float32)
+        del hsi_data_cube
 
-        if assets.config.get("dataLoader.normalize", True):
-            mean_scaler = assets.images.scaler_images[0]
-            std_scaler = assets.images.scaler_images[1]
-            normalized_cube = (
-                hsi_data_cube_rgb - mean_scaler[np.newaxis, np.newaxis, :]
-            ) / std_scaler[np.newaxis, np.newaxis, :]
-        else:
-            normalized_cube = hsi_data_cube_rgb
-
-        hsi_height, hsi_width, _ = normalized_cube.shape
+        hsi_height, hsi_width, num_channels = hsi_data_cube_rgb.shape
         LOGGER.debug("HSI cube dimensions after preprocessing h=%s, w=%s", hsi_height, hsi_width)
+
+        apply_normalization = assets.config.get("dataLoader.normalize", True)
+        mean_view: np.ndarray | None = None
+        std_view: np.ndarray | None = None
+        window_buffer: np.ndarray | None = None
+        if apply_normalization:
+            mean_scaler = np.asarray(assets.images.scaler_images[0], dtype=np.float32)
+            std_scaler = np.asarray(assets.images.scaler_images[1], dtype=np.float32)
+            mean_view = mean_scaler.reshape(1, 1, -1)
+            std_view = std_scaler.reshape(1, 1, -1).copy()
+            std_view[std_view == 0] = 1.0
+            max_window_width = min(runtime.window_width, hsi_width)
+            window_buffer = np.empty((hsi_height, max_window_width, num_channels), dtype=np.float32)
+            # Reuse a single float32 buffer to normalize each window and avoid a full-size normalized cube.
 
         tracker = bunchTracker(match_threshold=runtime.tracker_match_threshold, slide_step=runtime.slide_step)
         all_results = []
@@ -101,8 +108,16 @@ def process_folder(
             end_x = min(start_x + runtime.window_width, hsi_width)
             LOGGER.debug("Processing window %s/%s pixels %s-%s", index + 1, total_steps, start_x, end_x)
 
-            current_window = np.array(normalized_cube[:, start_x:end_x, :])
-            current_window_rgb = np.array(hsi_data_cube_rgb[:, start_x:end_x, :])
+            current_window_rgb = hsi_data_cube_rgb[:, start_x:end_x, :]
+            if apply_normalization and window_buffer is not None and mean_view is not None and std_view is not None:
+                width = current_window_rgb.shape[1]
+                normalized_window = window_buffer[:, :width, :]
+                # Fill the buffer with the normalized view in-place to keep per-iteration allocations minimal.
+                np.subtract(current_window_rgb, mean_view, out=normalized_window)
+                np.divide(normalized_window, std_view, out=normalized_window)
+                current_window = normalized_window
+            else:
+                current_window = current_window_rgb
             current_gps = interpolate_gps(runtime.start_point_gps, runtime.end_point_gps, index, total_steps)
 
             window_results = process_single_window(
@@ -122,8 +137,13 @@ def process_folder(
 
             if window_results:
                 all_results.extend(window_results)
+            del current_window, current_window_rgb, window_results
 
         LOGGER.info("Detected %s grape bunches across all windows", len(all_results))
+
+        if window_buffer is not None:
+            del window_buffer, mean_view, std_view
+            gc.collect()
 
         rgb_bands = runtime.visualization.rgb_bands
         rgb_cube = hsi_data_cube_rgb[:, :, list(rgb_bands)]

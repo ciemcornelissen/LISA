@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import os
 import pickle
-import random
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence, Tuple
 
@@ -24,21 +23,48 @@ from lisa.legacy_models import (
 
 LOGGER = logging.getLogger(__name__)
 
+LFS_POINTER_PREFIX = b"version https://git-lfs.github.com/spec/v1"
+
+
+def _ensure_materialized(path: Path) -> None:
+    if not path.exists():
+        raise FileNotFoundError(f"Missing required model artefact: {path}")
+    try:
+        with path.open("rb") as handle:
+            header = handle.read(len(LFS_POINTER_PREFIX))
+    except OSError as exc:  # pragma: no cover - surface helpful context
+        raise RuntimeError(f"Unable to read required artefact: {path}") from exc
+    if header.startswith(LFS_POINTER_PREFIX):
+        raise RuntimeError(
+            f"{path} looks like a Git LFS pointer. Run `git lfs pull` or `bash scripts/download_models.sh` to fetch the real file."
+        )
+
 
 def load_models_data(models_root: str | Path = "models") -> Tuple[Dict[str, object], Dict[str, object], object, object, Dict[str, object]]:
     """Load YOLO, transformer models, and cached datasets from disk."""
 
     models_root = Path(models_root)
 
+    weight_checkpoint = models_root / "cross_weight_predictor_epoch_99_R2_0.757_end_R20.610_runID_i0mijofs.pth"
+    yolo_checkpoint = models_root / "yoloModel_wandb_5l8pg9sf_map50old_0.5658.pt"
+    ae_checkpoint = models_root / "ae_predictor_epoch_150_R2_0.5951396226882935_runID_cd7605a0.pth"
+
+    required_files = [
+        models_root / "configs.pkl",
+        models_root / "images.pkl",
+        models_root / "weight_images.pkl",
+        weight_checkpoint,
+        yolo_checkpoint,
+        ae_checkpoint,
+    ]
+    for artefact in required_files:
+        _ensure_materialized(artefact)
+
     with (models_root / "configs.pkl").open("rb") as handle:
         loaded = pickle.load(handle)
     config = loaded["config"]
     model_config = loaded["model_config"]
     ae_config = loaded["ae_config"]
-
-    weight_checkpoint = models_root / "cross_weight_predictor_epoch_99_R2_0.757_end_R20.610_runID_i0mijofs.pth"
-    yolo_checkpoint = models_root / "yoloModel_wandb_5l8pg9sf_map50old_0.5658.pt"
-    ae_checkpoint = models_root / "ae_predictor_epoch_150_R2_0.5951396226882935_runID_cd7605a0.pth"
 
     weight_config_params = torch.load(weight_checkpoint, map_location=torch.device("cpu"))
 
@@ -125,8 +151,9 @@ def extract_patches_from_bbox(
     center_x1, center_y1 = center_x - center_w / 2, center_y - center_h / 2
     center_x2, center_y2 = center_x + center_w / 2, center_y + center_h / 2
 
-    potential: List[np.ndarray] = []
+    patches: List[np.ndarray] = []
     rng = np.random.default_rng()
+    samples_seen = 0
     for y in range(0, max(h - patch_h + 1, 1), stride):
         for x in range(0, max(w - patch_w + 1, 1), stride):
             patch_center_x = x + patch_w / 2
@@ -134,12 +161,15 @@ def extract_patches_from_bbox(
             is_center = center_x1 <= patch_center_x <= center_x2 and center_y1 <= patch_center_y <= center_y2
             if is_center or rng.random() < 0.33:
                 patch = bunch_hsi_data[y : y + patch_h, x : x + patch_w, :]
-                potential.append(patch)
+                samples_seen += 1
+                if len(patches) < max_patches:
+                    patches.append(patch)
+                else:
+                    replace_index = rng.integers(0, samples_seen)
+                    if replace_index < max_patches:
+                        patches[replace_index] = patch
 
-    if len(potential) > max_patches:
-        LOGGER.debug("Sampling %s patches down to %s", len(potential), max_patches)
-        return random.sample(potential, max_patches)
-    return potential
+    return patches
 
 
 def preprocess_and_predict_quality(
@@ -278,6 +308,7 @@ def process_single_window(
 
         patches = extract_patches_from_bbox(hsi_window, bbox)
         quality_results = preprocess_and_predict_quality(patches, models["quality"], models)
+        del patches
 
         if quality_results:
             avg_brix, avg_acid, grape_percentage = quality_results

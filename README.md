@@ -44,6 +44,22 @@ The hyperspectral captures are large (several GB per sweep), so the repository k
    ```
    The script fetches the archive, extracts it into `data/sample_capture`, and cleans up the tarball. Update the URL once the hosting location is final.
 
+## Pretrained Models
+
+The `models/` directory is populated with large checkpoints and cached tensors. They are stored outside of Git to keep the repository lightweight. Provide a tarball that mirrors the `models/` folder structure and expose it via a direct download link.
+
+The helper script now defaults to the public archive hosted by the team. Simply run:
+```bash
+bash scripts/download_models.sh
+```
+Set `LISA_MODELS_URL` (and optionally `LISA_MODELS_ARCHIVE_NAME`) if you host a private mirror:
+```bash
+LISA_MODELS_URL="https://example.com/custom_models.tar.gz" LISA_MODELS_ARCHIVE_NAME="custom.tar.gz" bash scripts/download_models.sh
+```
+The script clears the existing directory, downloads the archive, extracts it into `models/`, and removes the temporary file.
+
+If the pipeline raises an error stating that a file “looks like a Git LFS pointer”, ensure the archive contains the real binary files and rerun the script. The check prevents accidentally running with placeholder pointer files.
+
 ## Usage
 
 Process an individual capture folder:

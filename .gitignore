@@ -1,0 +1,22 @@
+# Virtual environment and editor config
+.venv/
+.vscode/
+
+# Python artefacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Data and model payloads fetched at runtime
+data/
+!data/.gitkeep
+models/
+!models/.gitkeep
+
+# Generated outputs and logs
+results/
+!results/.gitkeep
+processed_folders.log
+
+# Notebook checkpoints
+.ipynb_checkpoints/
